@@ -1,0 +1,18 @@
+spring:
+  ai:
+    deepseek:
+      api-key: sk-205aed6614f94a5898f2db56c932fff8
+      chat:
+        model: deepseek-chat
+        temperature: 0.8
+        options:
+          thinking-enabled: false
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/itheima?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&allowPublicKeyRetrieval=true&useSSL=false
+    username: root
+    password: 123456
+logging:
+  level:
+    org.springframework.ai: DEBUG
+    com.nanhua.spring_ai: DEBUG
