@@ -1,12 +1,25 @@
 spring:
+  servlet:
+    multipart:
+      max-file-size: 30MB
+      max-request-size: 40MB
   ai:
+    openai:
+      base-url: https://dashscope.aliyuncs.com/compatible-mode/v1  # ✅ 加上 /v1
+      api-key: ${BAILIAN_API_KEY}
+      embedding:
+        options:
+          model: text-embedding-v4
+          dimensions: 1024
+
     deepseek:
-      api-key: sk-205aed6614f94a5898f2db56c932fff8
+      api-key: ${DEEPSEEK_API_KEY}
       chat:
         model: deepseek-chat
         temperature: 0.8
         options:
           thinking-enabled: false
+
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/itheima?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&allowPublicKeyRetrieval=true&useSSL=false
