@@ -1,6 +1,5 @@
 package com.nanhua.spring_ai.Config;
 
-import com.nanhua.spring_ai.advisor.CustomLoggerAdvisor;
 import com.nanhua.spring_ai.prompt.GameClientPrompt;
 import com.nanhua.spring_ai.prompt.ServiceClientPrompt;
 import com.nanhua.spring_ai.tools.CourseTools;
@@ -30,7 +29,7 @@ public class CommenConfigration {
         return ChatClient.builder(model)
                 .defaultSystem("你是一个编程助手，你最擅长Java，喜欢帮助他人解决编程方面的问题")
                 .defaultAdvisors(
-                        new CustomLoggerAdvisor(),
+                        new SimpleLoggerAdvisor(),
                         MessageChatMemoryAdvisor.builder(chatMemory).build()
                 )
                 .build();
@@ -41,7 +40,7 @@ public class CommenConfigration {
         return ChatClient.builder(model)
                 .defaultSystem(GameClientPrompt.PROMPT)
                 .defaultAdvisors(
-                        new CustomLoggerAdvisor(),
+                        new SimpleLoggerAdvisor(),
                         MessageChatMemoryAdvisor.builder(chatMemory).build()
                 )
                 .build();
@@ -52,7 +51,7 @@ public class CommenConfigration {
         return ChatClient.builder(model)
                 .defaultSystem(ServiceClientPrompt.PROMPT)
                 .defaultAdvisors(
-                        new CustomLoggerAdvisor(),
+                        new SimpleLoggerAdvisor(),
                         MessageChatMemoryAdvisor.builder(chatMemory).build()
                 )
                 .defaultTools(courseTools)
@@ -73,7 +72,7 @@ public class CommenConfigration {
             VectorStore vectorStore) {
         return ChatClient.builder(model)
                 .defaultAdvisors(
-                        new CustomLoggerAdvisor(),
+                        SimpleLoggerAdvisor.builder().build(),
                         MessageChatMemoryAdvisor.builder(chatMemory).build(),
                         QuestionAnswerAdvisor
                                 .builder(vectorStore)
