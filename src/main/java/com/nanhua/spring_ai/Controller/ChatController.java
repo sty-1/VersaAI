@@ -33,8 +33,16 @@ public class ChatController {
 
         return chatClient.prompt()
                 .user(prompt)
+                /**
+                 * 配置消息记忆顾问（MessageChatMemoryAdvisor）的会话 ID 参数，
+                 * 使顾问能够根据 chatId 自动加载历史消息拼接到 Prompt 中，
+                 * 并在 AI 回复后将本轮对话保存，从而实现多轮上下文记忆。
+                 *
+                 * @param ChatMemory.CONVERSATION_ID 参数键名，Spring AI 2.0.0-M6 版本约定的常量
+                 * @param chatId 会话唯一标识，由前端传入，同一会话的多轮消息共享此 ID
+                 */
                 .advisors(a -> a.param(
-                        ChatMemory.CONVERSATION_ID,   // ← 2.0.0-M6 的正确 key
+                        ChatMemory.CONVERSATION_ID,
                         chatId
                 ))
                 .stream()

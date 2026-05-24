@@ -7,8 +7,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@Component
-public class InMemoryChathistoryRepository implements ChatHistoryRepository
+//@Component
+    public class InMemoryChathistoryRepository implements ChatHistoryRepository
 {
 
     private final Map<String, List<String>> chatHistory =new HashMap<>();
