@@ -49,7 +49,7 @@ public class ChatController {
                         ChatMemory.CONVERSATION_ID,
                         chatId
                 ))
-                .tools(allTools)      //添加工具调用
+                .toolCallbacks(allTools)      //添加工具调用
                 .stream()
                 .content();
     }
