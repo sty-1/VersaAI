@@ -5,6 +5,7 @@ import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.memory.ChatMemory;
+import org.springframework.ai.tool.ToolCallback;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,6 +23,9 @@ public class ChatController {
     private ChatClient chatClient;
     @Resource
     private ChatHistoryRepository chatHistoryRepository;
+
+    @Resource
+    private ToolCallback[] allTools;
 
     @RequestMapping(value = "/chat", produces = "text/html;charset=utf-8")
     public Flux<String> chatStream(
@@ -45,6 +49,7 @@ public class ChatController {
                         ChatMemory.CONVERSATION_ID,
                         chatId
                 ))
+                .tools(allTools)      //添加工具调用
                 .stream()
                 .content();
     }

@@ -3,6 +3,8 @@ spring:
     multipart:
       max-file-size: 30MB
       max-request-size: 40MB
+  profiles:
+    active: local
   ai:
     openai:
       base-url: https://dashscope.aliyuncs.com/compatible-mode/v1  # ✅ 加上 /v1
@@ -11,7 +13,6 @@ spring:
         options:
           model: text-embedding-v4
           dimensions: 1024
-
     deepseek:
       api-key: ${DEEPSEEK_API_KEY}
       chat:
@@ -29,3 +30,7 @@ logging:
   level:
     org.springframework.ai: DEBUG
     com.nanhua.spring_ai: DEBUG
+search-api:
+  api-key:                 #忽略本地私有配置文件
+
+
