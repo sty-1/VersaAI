@@ -2,6 +2,8 @@ package com.nanhua.spring_ai.agent;
 
 
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.StrUtil;
+import cn.hutool.json.JSONObject;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.extern.slf4j.Slf4j;
@@ -15,9 +17,11 @@ import org.springframework.ai.model.tool.ToolCallingChatOptions;
 import org.springframework.ai.model.tool.ToolCallingManager;
 import org.springframework.ai.model.tool.ToolExecutionResult;
 import org.springframework.ai.tool.ToolCallback;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 @EqualsAndHashCode(callSuper = true)
@@ -140,5 +144,115 @@ public class ToolCallAgent extends ReActAgent {
         }
         log.info(results);
         return results;
+    }
+
+    // ═══════════════════════════════════════════
+    // SSE 流式运行 —— 发送结构化 JSON 事件
+    // ═══════════════════════════════════════════
+    @Override
+    public SseEmitter runStream(String userPrompt) {
+        SseEmitter emitter = new SseEmitter(300_000L);
+
+        CompletableFuture.runAsync(() -> {
+            try {
+                if (getState() != AgentState.IDLE) {
+                    sendEvent(emitter, "error", "Agent is not idle: " + getState());
+                    emitter.complete();
+                    return;
+                }
+                if (StrUtil.isBlank(userPrompt)) {
+                    sendEvent(emitter, "error", "Prompt cannot be empty");
+                    emitter.complete();
+                    return;
+                }
+
+                setState(AgentState.RUNNING);
+                getMessageList().add(new UserMessage(userPrompt));
+
+                try {
+                    for (int i = 0; i < getMaxSteps() && getState() != AgentState.FINISHED; i++) {
+                        setCurrentStep(i + 1);
+                        log.info("Executing step {}/{}", getCurrentStep(), getMaxSteps());
+
+                        // ── THINK ──
+                        sendEvent(emitter, "thinking", null);
+
+                        boolean hasToolCalls = think();
+
+                        AssistantMessage msg = toolCallChatResponse.getResult().getOutput();
+                        String thought = msg.getText();
+                        List<AssistantMessage.ToolCall> toolCalls = msg.getToolCalls();
+
+                        if (!hasToolCalls) {
+                            if (thought != null && !thought.isBlank()) {
+                                sendEvent(emitter, "done", thought);
+                            }
+                            setState(AgentState.FINISHED);
+                            break;
+                        }
+
+                        for (AssistantMessage.ToolCall tc : toolCalls) {
+                            JSONObject payload = new JSONObject();
+                            payload.set("tool", tc.name());
+                            payload.set("args", tc.arguments());
+                            sendEvent(emitter, "tool_call", payload.toString());
+                        }
+
+                        // ── ACT ──
+                        String actResult = act();
+                        sendEvent(emitter, "tool_result", actResult);
+                    }
+
+                    if (getCurrentStep() >= getMaxSteps()) {
+                        setState(AgentState.FINISHED);
+                        sendEvent(emitter, "done", "Maximum steps reached (" + getMaxSteps() + ")");
+                    }
+
+                    emitter.complete();
+                } catch (Exception e) {
+                    setState(AgentState.ERROR);
+                    log.error("Agent execution failed", e);
+                    try {
+                        sendEvent(emitter, "error", e.getMessage());
+                        emitter.complete();
+                    } catch (Exception ex) {
+                        emitter.completeWithError(ex);
+                    }
+                } finally {
+                    this.cleanup();
+                }
+            } catch (Exception e) {
+                emitter.completeWithError(e);
+            }
+        });
+
+        emitter.onTimeout(() -> {
+            setState(AgentState.ERROR);
+            this.cleanup();
+            log.warn("SSE timeout");
+        });
+
+        emitter.onCompletion(() -> {
+            if (getState() == AgentState.RUNNING) {
+                setState(AgentState.FINISHED);
+            }
+            this.cleanup();
+            log.info("SSE completed");
+        });
+
+        return emitter;
+    }
+
+    private void sendEvent(SseEmitter emitter, String type, String content) {
+        try {
+            JSONObject event = new JSONObject();
+            event.set("type", type);
+            if (content != null) {
+                event.set("content", content);
+            }
+            emitter.send(event.toString());
+        } catch (Exception e) {
+            log.error("Failed to send SSE event [{}]: {}", type, e.getMessage());
+        }
     }
 }

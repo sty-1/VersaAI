@@ -15,6 +15,8 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.MessageAggregator;
 import org.springframework.ai.deepseek.DeepSeekChatModel;
 import org.springframework.ai.openai.OpenAiEmbeddingModel;
+import org.springframework.ai.support.ToolCallbacks;
+import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.SimpleVectorStore;
 import org.springframework.ai.vectorstore.VectorStore;
@@ -85,6 +87,22 @@ public class CommenConfigration {
                                                 .build()
                                 ).build()
                 )
+                .build();
+    }
+
+
+    @Bean
+    public ChatClient superManusClient(
+            DeepSeekChatModel model,
+            ChatMemory chatMemory,
+            ToolCallback[] toolCallbacks
+    ){
+        return ChatClient.builder(model)
+                .defaultAdvisors(
+                        new CustomLoggerAdvisor(),
+                        MessageChatMemoryAdvisor.builder(chatMemory).build()
+                )
+                .defaultToolCallbacks(toolCallbacks)
                 .build();
     }
 }

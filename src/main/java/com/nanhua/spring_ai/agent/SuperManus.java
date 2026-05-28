@@ -2,14 +2,15 @@ package com.nanhua.spring_ai.agent;
 
 import com.nanhua.spring_ai.advisor.CustomLoggerAdvisor;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.deepseek.DeepSeekChatModel;
+import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.tool.ToolCallback;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 @Component
 public class SuperManus extends ToolCallAgent {
 
-    public SuperManus(ToolCallback[] allTools, DeepSeekChatModel model) {
+    public SuperManus(ToolCallback[] allTools, @Qualifier("deepSeekChatModel") ChatModel model) {
         super(allTools);
         this.setName("SuperManus");
         String SYSTEM_PROMPT = """  

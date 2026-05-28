@@ -15,9 +15,7 @@ class YuManusTest {
     @Test
     void run() {  
         String userPrompt = """  
-                我想吃饭我在南华大学，请帮我找到 5 公里内合适的地点，  
-                并结合一些网络图片，制定一份详细的吃饭计划，  
-                并以 文档 格式输出""";
+                帮我写一篇关于衡阳的描述""";
         String answer = superManus.run(userPrompt);
         Assertions.assertNotNull(answer);
     }  

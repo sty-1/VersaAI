@@ -1,0 +1,178 @@
+在 controller 包下新建 AiController，将所有的接口都写在这个文件内。
+
+先编写一个同步接口：
+
+@RestController
+@RequestMapping("/ai")
+public class AiController {
+
+    @Resource
+    private LoveApp loveApp;
+
+    @Resource
+    private ToolCallback[] allTools;
+
+    @Resource
+    private ChatModel dashscopeChatModel;
+
+    @GetMapping("/love_app/chat/sync")
+    public String doChatWithLoveAppSync(String message, String chatId) {
+        return loveApp.doChat(message, chatId);
+    }
+}
+
+3、开发 SSE 流式接口
+然后编写基于⁠ SSE 的流式输出接‌口，有几种常见的实现方​式：         ‎           ‌            
+
+1） 返回⁠ Flux 响应式‌对象，并且添加 S​SE 对应的 Me‎diaType：
+
+@GetMapping(value = "/love_app/chat/sse", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+public Flux<String> doChatWithLoveAppSSE(String message, String chatId) {
+    return loveApp.doChatByStream(message, chatId);
+}
+
+2）返回 ⁠Flux 对象，并且‌设置泛型为 Serv​erSentEv‎ent。使用这种方式可以‌省略 MediaType：
+
+@GetMapping(value = "/love_app/chat/sse")
+public Flux<ServerSentEvent<String>> doChatWithLoveAppSSE(String message, String chatId) {
+    return loveApp.doChatByStream(message, chatId)
+            .map(chunk -> ServerSentEvent.<String>builder()
+                    .data(chunk)
+                    .build());
+}
+
+3）使用 ⁠SSEEmiter，‌通过 send 方法​持续向 SseEmi‎tter 发送消息（‌有点像 IO 操作）：
+
+@GetMapping("/love_app/chat/sse/emitter")
+public SseEmitter doChatWithLoveAppSseEmitter(String message, String chatId) {
+
+    SseEmitter emitter = new SseEmitter(180000L);
+
+    loveApp.doChatByStream(message, chatId)
+            .subscribe(
+
+                    chunk -> {
+                        try {
+                            emitter.send(chunk);
+                        } catch (IOException e) {
+                            emitter.completeWithError(e);
+                        }
+                    },
+
+                    emitter::completeWithError,
+
+                    emitter::complete
+            );
+
+    return emitter;
+}
+
+
+
+
+
+
+
+
+由于智能体执行⁠过程通常包含多个步骤，执行‌时间较长，使用同步方法会导​致用户体验不佳。因此，我们‎采用 SSE 技术将智能体‌的推理过程实时分步输出给用户。
+
+开发
+1）首先在 BaseAgent 类中添加流式输出方法：
+
+public SseEmitter runStream(String userPrompt) {
+
+    SseEmitter emitter = new SseEmitter(300000L);
+
+
+    CompletableFuture.runAsync(() -> {
+        try {
+            if (this.state != AgentState.IDLE) {
+                emitter.send("错误：无法从状态运行代理: " + this.state);
+                emitter.complete();
+                return;
+            }
+            if (StringUtil.isBlank(userPrompt)) {
+                emitter.send("错误：不能使用空提示词运行代理");
+                emitter.complete();
+                return;
+            }
+
+
+            state = AgentState.RUNNING;
+
+            messageList.add(new UserMessage(userPrompt));
+
+            try {
+                for (int i = 0; i < maxSteps && state != AgentState.FINISHED; i++) {
+                    int stepNumber = i + 1;
+                    currentStep = stepNumber;
+                    log.info("Executing step " + stepNumber + "/" + maxSteps);
+
+
+                    String stepResult = step();
+                    String result = "Step " + stepNumber + ": " + stepResult;
+
+
+                    emitter.send(result);
+                }
+
+                if (currentStep >= maxSteps) {
+                    state = AgentState.FINISHED;
+                    emitter.send("执行结束: 达到最大步骤 (" + maxSteps + ")");
+                }
+
+                emitter.complete();
+            } catch (Exception e) {
+                state = AgentState.ERROR;
+                log.error("执行智能体失败", e);
+                try {
+                    emitter.send("执行错误: " + e.getMessage());
+                    emitter.complete();
+                } catch (Exception ex) {
+                    emitter.completeWithError(ex);
+                }
+            } finally {
+
+                this.cleanup();
+            }
+        } catch (Exception e) {
+            emitter.completeWithError(e);
+        }
+    });
+
+
+    emitter.onTimeout(() -> {
+        this.state = AgentState.ERROR;
+        this.cleanup();
+        log.warn("SSE connection timed out");
+    });
+
+    emitter.onCompletion(() -> {
+        if (this.state == AgentState.RUNNING) {
+            this.state = AgentState.FINISHED;
+        }
+        this.cleanup();
+        log.info("SSE connection completed");
+    });
+
+    return emitter;
+}
+
+上述代码虽然⁠看着很复杂，但是大部分‌都是在原有 run 方​法的基础上进行改造，补‎充给 SseEmitt‌er 推送消息的代码。
+
+注意，上述代码中使用 CompletableFuture.runAsync() 实现非阻塞式异步执行，否则会长时间占用 Web 服务器线程池资源。
+
+2）在 AiController 中编写新的接口，注意每次对话都要创建一个新的实例：
+
+@Resource
+private ToolCallback[] allTools;
+
+@Resource
+private ChatModel dashscopeChatModel;
+
+
+@GetMapping("/manus/chat")
+public SseEmitter doChatWithManus(String message) {
+    YuManus yuManus = new YuManus(allTools, dashscopeChatModel);
+    return yuManus.runStream(message);
+}
