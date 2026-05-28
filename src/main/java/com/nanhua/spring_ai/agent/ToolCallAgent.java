@@ -180,6 +180,7 @@ public class ToolCallAgent extends ReActAgent {
                         sendEvent(emitter, "thinking", null);
 
                         boolean hasToolCalls = think();
+                        sendTokenUsage(emitter);
 
                         AssistantMessage msg = toolCallChatResponse.getResult().getOutput();
                         String thought = msg.getText();
@@ -203,6 +204,7 @@ public class ToolCallAgent extends ReActAgent {
                         // ── ACT ──
                         String actResult = act();
                         sendEvent(emitter, "tool_result", actResult);
+                        sendTokenUsage(emitter);
                     }
 
                     if (getCurrentStep() >= getMaxSteps()) {
@@ -256,5 +258,40 @@ public class ToolCallAgent extends ReActAgent {
         } catch (Exception e) {
             log.error("Failed to send SSE event [{}]: {}", type, e.getMessage());
         }
+    }
+
+    private void sendTokenUsage(SseEmitter emitter) {
+        try {
+            long maxContext = 128_000L;
+            long tokens = estimateMessageListTokens();
+
+            // 优先用 API 返回的实际 promptTokens（最精确）
+            if (toolCallChatResponse != null && toolCallChatResponse.getMetadata() != null) {
+                var usage = toolCallChatResponse.getMetadata().getUsage();
+                if (usage != null && usage.getPromptTokens() != null) {
+                    tokens = usage.getPromptTokens();
+                }
+            }
+
+            JSONObject event = new JSONObject();
+            event.set("type", "token_usage");
+            event.set("step", getCurrentStep());
+            event.set("maxSteps", getMaxSteps());
+            event.set("tokens", Math.toIntExact(tokens));
+            event.set("maxTokens", Math.toIntExact(maxContext));
+            emitter.send(event.toString());
+        } catch (Exception e) {
+            log.error("Failed to send token_usage event: {}", e.getMessage());
+        }
+    }
+
+    private long estimateMessageListTokens() {
+        long totalChars = getMessageList().stream()
+                .mapToLong(m -> {
+                    String text = m.getText();
+                    return text != null ? text.length() : 0;
+                })
+                .sum();
+        return totalChars * 4 / 3;
     }
 }

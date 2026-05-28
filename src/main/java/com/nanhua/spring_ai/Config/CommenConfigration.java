@@ -91,18 +91,18 @@ public class CommenConfigration {
     }
 
 
-    @Bean
-    public ChatClient superManusClient(
-            DeepSeekChatModel model,
-            ChatMemory chatMemory,
-            ToolCallback[] toolCallbacks
-    ){
-        return ChatClient.builder(model)
-                .defaultAdvisors(
-                        new CustomLoggerAdvisor(),
-                        MessageChatMemoryAdvisor.builder(chatMemory).build()
-                )
-                .defaultToolCallbacks(toolCallbacks)
-                .build();
-    }
+//    @Bean
+//    public ChatClient superManusClient(
+//            DeepSeekChatModel model,
+//            ChatMemory chatMemory,
+//            ToolCallback[] toolCallbacks
+//    ){
+//        return ChatClient.builder(model)
+//                .defaultAdvisors(
+//                        new CustomLoggerAdvisor(),
+//                        MessageChatMemoryAdvisor.builder(chatMemory).build()
+//                )
+//                .defaultToolCallbacks(toolCallbacks)
+//                .build();
+//    }
 }
