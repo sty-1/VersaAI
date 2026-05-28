@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 public class SuperManus extends ToolCallAgent {
 
     public SuperManus(ToolCallback[] allTools, @Qualifier("deepSeekChatModel") ChatModel model, ChatMemory chatMemory) {
-        super(allTools);
+        super(allTools, model);
         this.setName("SuperManus");
         String SYSTEM_PROMPT = """
                 You are SuperManus, an all-capable AI assistant, aimed at solving any task presented by the user.
