@@ -7,6 +7,7 @@ import cn.hutool.json.JSONObject;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.ToolResponseMessage;
@@ -82,6 +83,7 @@ public class ToolCallAgent extends ReActAgent {
                     .system(getSystemPrompt())
                     .toolCallbacks(availableTools)
                     .options(chatOptions.mutate())
+                    .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, getChatId()))
                     .call()
                     .chatResponse();
 

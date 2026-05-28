@@ -28,6 +28,9 @@ public abstract class BaseAgent {
      //大模型
      private ChatClient chatClient;
 
+     //会话ID，用于 ChatMemory 存取历史记录
+     private String chatId;
+
      //需要自己维护的memory
     private List<Message> messageList=new ArrayList<>();
 
