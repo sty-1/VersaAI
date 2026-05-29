@@ -1,4 +1,4 @@
-# Spring AI — AI 编程大师
+# Spring AI 
 
 > 基于 Spring AI 2.0 + DeepSeek 大模型的多场景智能对话平台，集成自主 Agent、RAG 知识库问答、角色扮演游戏与智能客服等能力。
 
